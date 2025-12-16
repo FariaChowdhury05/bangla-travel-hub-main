@@ -43,6 +43,15 @@ if ($method === 'GET') {
     while ($row = $result->fetch_assoc()) {
         $row['price'] = (float) $row['price'];
         $row['booking_count'] = (int) $row['booking_count'];
+        // Normalize duration to integer; if not set and dates exist compute it
+        $row['duration_days'] = isset($row['duration_days']) ? intval($row['duration_days']) : 1;
+        if (($row['duration_days'] <= 0 || $row['duration_days'] === 1) && !empty($row['start_date']) && !empty($row['end_date'])) {
+            $sd = strtotime($row['start_date']);
+            $ed = strtotime($row['end_date']);
+            if ($sd && $ed && $ed >= $sd) {
+                $row['duration_days'] = intval(floor(($ed - $sd) / 86400)) + 1;
+            }
+        }
 
         // Fetch destinations for this package
         $dest_stmt = safe_prepare($conn, "
@@ -63,6 +72,12 @@ if ($method === 'GET') {
             $destinations[] = $dest_row;
         }
         $row['destinations'] = $destinations;
+
+        // Normalize meal and transport fields
+        $row['breakfast'] = isset($row['breakfast']) ? (bool) intval($row['breakfast']) : false;
+        $row['lunch'] = isset($row['lunch']) ? (bool) intval($row['lunch']) : false;
+        $row['dinner'] = isset($row['dinner']) ? (bool) intval($row['dinner']) : false;
+        $row['transport'] = !empty($row['transport']) ? $row['transport'] : null;
 
         $packages[] = $row;
     }
@@ -94,12 +109,30 @@ if ($method === 'POST') {
     $name = $input['name'];
     $desc = $input['description'] ?? null;
     $price = isset($input['price']) ? floatval($input['price']) : 0.00;
-    $duration = isset($input['duration_days']) ? intval($input['duration_days']) : 1;
+    // prefer explicit duration; if missing but both dates provided, compute from dates (inclusive)
+    if (isset($input['duration_days'])) {
+        $duration = intval($input['duration_days']);
+    } else if (!empty($input['start_date']) && !empty($input['end_date'])) {
+        $sd = strtotime($input['start_date']);
+        $ed = strtotime($input['end_date']);
+        if ($sd && $ed && $ed >= $sd) {
+            $duration = intval(floor(($ed - $sd) / 86400)) + 1;
+        } else {
+            $duration = 1;
+        }
+    } else {
+        $duration = 1;
+    }
+    $breakfast = isset($input['breakfast']) ? (int) $input['breakfast'] : 0;
+    $lunch = isset($input['lunch']) ? (int) $input['lunch'] : 0;
+    $dinner = isset($input['dinner']) ? (int) $input['dinner'] : 0;
+    $transport = $input['transport'] ?? null;
+    $start_date = $input['start_date'] ?? null;
+    $end_date = $input['end_date'] ?? null;
     $image_url = $input['image_url'] ?? null;
 
-    $stmt = safe_prepare($conn, "INSERT INTO tour_packages (name, description, price, duration_days, image_url) VALUES (?, ?, ?, ?, ?)");
-    // FIXED: Changed from 'ssdiss' to 'ssdis' (5 parameters, not 6)
-    $stmt->bind_param('ssdis', $name, $desc, $price, $duration, $image_url);
+    $stmt = safe_prepare($conn, "INSERT INTO tour_packages (name, description, price, duration_days, breakfast, lunch, dinner, transport, start_date, end_date, image_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+    $stmt->bind_param('ssdiiisssss', $name, $desc, $price, $duration, $breakfast, $lunch, $dinner, $transport, $start_date, $end_date, $image_url);
 
     if ($stmt->execute()) {
         echo json_encode(['success' => true, 'id' => $conn->insert_id]);
@@ -138,6 +171,30 @@ if ($method === 'PATCH') {
             $types .= $t;
             $params[] = $input[$field];
         }
+    }
+
+    // support new fields: breakfast, lunch, dinner, transport, start_date, end_date
+    $extra = ['breakfast' => 'i', 'lunch' => 'i', 'dinner' => 'i', 'transport' => 's', 'start_date' => 's', 'end_date' => 's'];
+    foreach ($extra as $field => $t) {
+        if (array_key_exists($field, $input)) {
+            $fields[] = "$field = ?";
+            $types .= $t;
+            $params[] = $input[$field];
+        }
+    }
+
+    // If duration wasn't provided but start/end dates are being updated, compute a duration value and include it
+    if (!array_key_exists('duration_days', $input) && array_key_exists('start_date', $input) && array_key_exists('end_date', $input)) {
+        $sd = strtotime($input['start_date']);
+        $ed = strtotime($input['end_date']);
+        if ($sd && $ed && $ed >= $sd) {
+            $computed = intval(floor(($ed - $sd) / 86400)) + 1;
+        } else {
+            $computed = 1;
+        }
+        $fields[] = "duration_days = ?";
+        $types .= 'i';
+        $params[] = $computed;
     }
 
     if (!count($fields)) {

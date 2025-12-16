@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Star, MapPin } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -6,6 +6,7 @@ import { API_ENDPOINTS } from "@/lib/api-config";
 import { toast } from "sonner";
 import Rooms from "./Rooms";
 import BookingForm from "./BookingForm";
+import HotelDetailFacilities from './HotelDetailFacilities';
 
 interface Hotel {
   id: number;
@@ -31,6 +32,8 @@ const HotelDetailsModal = ({ hotel, open, onOpenChange }: Props) => {
     setHotelData(hotel);
   }, [hotel]);
 
+  // facilities rendering delegated to `HotelDetailFacilities` component
+
   if (!hotelData) return null;
 
   return (
@@ -39,6 +42,7 @@ const HotelDetailsModal = ({ hotel, open, onOpenChange }: Props) => {
         <DialogHeader>
           <DialogTitle className="text-2xl">{hotelData.name}</DialogTitle>
         </DialogHeader>
+        <DialogDescription className="sr-only">Details about the hotel, rooms and booking form.</DialogDescription>
 
         <div className="space-y-4">
           {hotelData.image_url ? (
@@ -70,6 +74,13 @@ const HotelDetailsModal = ({ hotel, open, onOpenChange }: Props) => {
               <p className="text-sm text-muted-foreground">{hotelData.description}</p>
             </div>
           )}
+
+          <div>
+            <h4 className="font-semibold">Facilities</h4>
+            <div className="mt-2">
+              <HotelDetailFacilities hotelId={hotelData.id} />
+            </div>
+          </div>
 
           {/* Rooms list */}
           <Rooms hotelId={hotelData.id} />

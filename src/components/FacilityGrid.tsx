@@ -25,8 +25,12 @@ export default function FacilityGrid({ hotelId, limit, className }: FacilityGrid
     fetch(`/api/hotel_facilities.php?hotel_id=${hotelId}`)
       .then((r) => r.json())
       .then((data) => {
+        // Support multiple response shapes: array, { facilities: [] }, { success: true, data: [] },
+        if (!data) return setFacilities([]);
         if (Array.isArray(data)) setFacilities(data);
         else if (data && Array.isArray(data.facilities)) setFacilities(data.facilities);
+        else if (data && data.success && Array.isArray(data.data)) setFacilities(data.data);
+        else if (data && data.success && data.data && Array.isArray(data.data.facilities)) setFacilities(data.data.facilities);
       })
       .catch(() => setFacilities([]))
       .finally(() => setLoading(false));

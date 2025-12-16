@@ -134,6 +134,98 @@ if ($method === 'GET') {
         echo json_encode(['success' => false, 'error' => 'Error deleting destination: ' . $conn->error]);
     }
 
+} elseif ($method === 'PATCH') {
+    // Admin only
+    if (!isAdmin()) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Only admins can update destinations']);
+        exit();
+    }
+    $input = json_decode(file_get_contents('php://input'), true) ?? [];
+    if (!isset($input['id'])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Destination ID required']);
+        exit();
+    }
+    $id = intval($input['id']);
+
+    $fields = [];
+    $params = [];
+    if (isset($input['name'])) {
+        $fields[] = 'name = ?';
+        $params[] = $conn->real_escape_string(trim($input['name']));
+    }
+    if (isset($input['description'])) {
+        $fields[] = 'description = ?';
+        $params[] = $conn->real_escape_string(trim($input['description']));
+    }
+    if (isset($input['image_url'])) {
+        $fields[] = 'image_url = ?';
+        $params[] = $conn->real_escape_string(trim($input['image_url']));
+    }
+    if (isset($input['rating'])) {
+        $fields[] = 'rating = ?';
+        $params[] = floatval($input['rating']);
+    }
+    if (isset($input['latitude'])) {
+        $fields[] = 'latitude = ?';
+        $params[] = floatval($input['latitude']);
+    }
+    if (isset($input['longitude'])) {
+        $fields[] = 'longitude = ?';
+        $params[] = floatval($input['longitude']);
+    }
+    if (isset($input['location_info'])) {
+        $fields[] = 'location_info = ?';
+        $params[] = $conn->real_escape_string(trim($input['location_info']));
+    }
+    if (isset($input['highlights'])) {
+        $fields[] = 'highlights = ?';
+        $params[] = $conn->real_escape_string(trim($input['highlights']));
+    }
+    if (isset($input['best_time_to_visit'])) {
+        $fields[] = 'best_time_to_visit = ?';
+        $params[] = $conn->real_escape_string(trim($input['best_time_to_visit']));
+    }
+
+    if (empty($fields)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'No fields to update']);
+        exit();
+    }
+
+    $sql = 'UPDATE destinations SET ' . implode(', ', $fields) . ' WHERE id = ?';
+    $stmt = $conn->prepare($sql);
+
+    $types = '';
+    foreach ($params as $p) {
+        if (is_int($p))
+            $types .= 'i';
+        elseif (is_float($p))
+            $types .= 'd';
+        else
+            $types .= 's';
+    }
+    $types .= 'i';
+    $params[] = $id;
+
+    $bind_names = [];
+    $bind_names[] = $types;
+    for ($i = 0; $i < count($params); $i++) {
+        $bind_name = 'param' . $i;
+        $$bind_name = $params[$i];
+        $bind_names[] = &$$bind_name;
+    }
+    call_user_func_array([$stmt, 'bind_param'], $bind_names);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Destination updated']);
+    } else {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $stmt->error]);
+    }
+    exit();
+
 } else {
     http_response_code(405);
     echo json_encode(['success' => false, 'error' => 'Method not allowed']);

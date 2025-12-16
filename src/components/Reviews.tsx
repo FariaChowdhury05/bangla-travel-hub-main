@@ -23,7 +23,7 @@ const Reviews = () => {
   const fetchReviews = async () => {
     setLoading(true);
     try {
-      const response = await fetch(API_ENDPOINTS.REVIEWS_GET);
+      const response = await fetch(API_ENDPOINTS.REVIEWS_GET, { credentials: 'include' });
       const data = await response.json();
       
       if (data.success && data.data) {

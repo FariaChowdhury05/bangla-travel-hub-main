@@ -6,8 +6,8 @@ require_once __DIR__ . '/auth-config.php';
 $method = $_SERVER['REQUEST_METHOD'];
 
 if ($method === 'GET') {
-    // Fetch approved and pending reviews
-    $stmt = $conn->prepare("SELECT id, name, location, tour, rating, comment, date, status FROM reviews WHERE status IN ('approved', 'pending') ORDER BY created_at DESC LIMIT 100");
+    // Fetch approved and pending reviews, prefer linked user name/email when available
+    $stmt = $conn->prepare("SELECT r.id, r.user_id, COALESCE(u.name, r.name) AS name, COALESCE(u.email, r.email) AS email, r.location, r.tour, r.rating, r.comment, r.date, r.status FROM reviews r LEFT JOIN users u ON u.id = r.user_id WHERE r.status IN ('approved', 'pending') ORDER BY r.created_at DESC LIMIT 100");
     $stmt->execute();
 
     $result = $stmt->get_result();
@@ -19,9 +19,21 @@ if ($method === 'GET') {
 
     http_response_code(200);
     echo json_encode(['success' => true, 'data' => $reviews]);
+
 } elseif ($method === 'POST') {
     // Create new review
     $input = json_decode(file_get_contents('php://input'), true);
+
+    // If user is logged in, capture their id and use session name/email if not provided
+    $linked_user_id = null;
+    if (isLoggedIn()) {
+        $user = getCurrentUser();
+        $linked_user_id = isset($user['id']) ? intval($user['id']) : null;
+        if (!isset($input['name']))
+            $input['name'] = $user['name'] ?? '';
+        if (!isset($input['email']))
+            $input['email'] = $user['email'] ?? '';
+    }
 
     // Validate input
     if (
@@ -48,9 +60,14 @@ if ($method === 'GET') {
     $tour = $conn->real_escape_string(trim($input['tour']));
     $comment = $conn->real_escape_string(trim($input['comment']));
 
-    // Insert review
-    $stmt = $conn->prepare("INSERT INTO reviews (name, email, location, tour, rating, comment, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')");
-    $stmt->bind_param('ssssis', $name, $email, $location, $tour, $rating, $comment);
+    // Insert review - include user_id when available
+    if ($linked_user_id !== null) {
+        $stmt = $conn->prepare("INSERT INTO reviews (user_id, name, email, location, tour, rating, comment, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')");
+        $stmt->bind_param('issssis', $linked_user_id, $name, $email, $location, $tour, $rating, $comment);
+    } else {
+        $stmt = $conn->prepare("INSERT INTO reviews (name, email, location, tour, rating, comment, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')");
+        $stmt->bind_param('ssssis', $name, $email, $location, $tour, $rating, $comment);
+    }
 
     if ($stmt->execute()) {
         http_response_code(201);

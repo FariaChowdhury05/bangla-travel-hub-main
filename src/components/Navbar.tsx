@@ -10,6 +10,19 @@ const Navbar = () => {
   const [user, setUser] = useState<any>(null);
   const [profileOpen, setProfileOpen] = useState(false);
   const navigate = useNavigate();
+  const handleDestinationsClick = (e: any) => {
+    e.preventDefault();
+    // navigate to index route (HashRouter) then scroll to section
+    try {
+      navigate('/');
+    } catch (err) {
+      // ignore
+    }
+    setTimeout(() => {
+      const el = document.getElementById('destinations');
+      if (el) el.scrollIntoView({ behavior: 'smooth' });
+    }, 180);
+  };
 
   useEffect(() => {
     // Load user from localStorage if present, then verify session with server
@@ -75,7 +88,7 @@ const Navbar = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <a href="/#destinations" className="text-foreground hover:text-primary transition-colors">
+            <a href="#destinations" onClick={handleDestinationsClick} className="text-foreground hover:text-primary transition-colors">
               Destinations
             </a>
             <Link to="/hotels" className="text-foreground hover:text-primary transition-colors">
@@ -161,7 +174,7 @@ const Navbar = () => {
         {/* Mobile Navigation */}
         {isMobileMenuOpen && (
           <div className="md:hidden py-4 space-y-4 border-t border-border">
-            <a href="/#destinations" className="block text-foreground hover:text-primary">
+            <a href="#destinations" onClick={handleDestinationsClick} className="block text-foreground hover:text-primary">
               Destinations
             </a>
             <Link to="/hotels" className="block text-foreground hover:text-primary">

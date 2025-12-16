@@ -5,6 +5,13 @@ CREATE TABLE IF NOT EXISTS tour_packages (
   description TEXT,
   price DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   duration_days INT DEFAULT 1,
+  -- Meals and logistics
+  breakfast TINYINT(1) DEFAULT 0,
+  lunch TINYINT(1) DEFAULT 0,
+  dinner TINYINT(1) DEFAULT 0,
+  transport VARCHAR(255) DEFAULT NULL,
+  start_date DATE DEFAULT NULL,
+  end_date DATE DEFAULT NULL,
   image_url VARCHAR(500) DEFAULT NULL,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;

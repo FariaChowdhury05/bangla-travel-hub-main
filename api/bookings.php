@@ -42,15 +42,19 @@ if ($method === 'GET') {
 
     if ($booking_id) {
         $sql = "SELECT b.id, b.user_id, b.hotel_id, b.package_id,
-                       COALESCE(h.name, p.name) AS booking_name,
-                       CAST(b.total_amount AS DECIMAL(10,2)) AS total_amount,
-                       b.status, b.check_in, b.check_out, b.nights, b.guest_count,
-                       b.created_at, b.updated_at,
-                       CASE WHEN b.hotel_id IS NOT NULL THEN 'hotel' ELSE 'package' END AS booking_type
-                FROM bookings b
-                LEFT JOIN hotels h ON h.id = b.hotel_id
-                LEFT JOIN tour_packages p ON p.id = b.package_id
-                WHERE b.id = ?";
+                   COALESCE(h.name, p.name) AS booking_name,
+                   CAST(b.total_amount AS DECIMAL(10,2)) AS total_amount,
+                   b.status, b.check_in, b.check_out, b.nights, b.guest_count,
+                   b.created_at, b.updated_at,
+                   CASE WHEN b.hotel_id IS NOT NULL THEN 'hotel' ELSE 'package' END AS booking_type,
+                   u.name AS user_name, u.email AS user_email,
+                     b.guide_id, g.name AS guide_name, g.rate_per_day AS guide_rate_per_day
+            FROM bookings b
+            LEFT JOIN hotels h ON h.id = b.hotel_id
+            LEFT JOIN tour_packages p ON p.id = b.package_id
+            LEFT JOIN users u ON u.id = b.user_id
+            LEFT JOIN guides g ON g.id = b.guide_id
+            WHERE b.id = ?";
         $stmt = safe_prepare($conn, $sql);
         $stmt->bind_param('i', $booking_id);
         $stmt->execute();
@@ -61,6 +65,7 @@ if ($method === 'GET') {
         $row['total_amount'] = (float) $row['total_amount'];
         $row['nights'] = isset($row['nights']) ? intval($row['nights']) : 0;
         $row['guest_count'] = isset($row['guest_count']) ? intval($row['guest_count']) : 0;
+        $row['guide_rate_per_day'] = isset($row['guide_rate_per_day']) ? (float) $row['guide_rate_per_day'] : null;
 
         if ($row['hotel_id']) {
             $rooms_stmt = safe_prepare($conn, "
@@ -106,15 +111,19 @@ if ($method === 'GET') {
     // List (admin_all or by user)
     if ($is_admin && $admin_all) {
         $sql = "SELECT b.id, b.user_id, b.hotel_id, b.package_id,
-                       COALESCE(h.name, p.name) AS booking_name,
-                       CAST(b.total_amount AS DECIMAL(10,2)) AS total_amount,
-                       b.status, b.check_in, b.check_out, b.nights, b.guest_count,
-                       b.created_at, b.updated_at,
-                       CASE WHEN b.hotel_id IS NOT NULL THEN 'hotel' ELSE 'package' END AS booking_type
-                FROM bookings b
-                LEFT JOIN hotels h ON h.id = b.hotel_id
-                LEFT JOIN tour_packages p ON p.id = b.package_id
-                WHERE 1=1";
+                   COALESCE(h.name, p.name) AS booking_name,
+                   CAST(b.total_amount AS DECIMAL(10,2)) AS total_amount,
+                   b.status, b.check_in, b.check_out, b.nights, b.guest_count,
+                   b.created_at, b.updated_at,
+                   CASE WHEN b.hotel_id IS NOT NULL THEN 'hotel' ELSE 'package' END AS booking_type,
+                   u.name AS user_name, u.email AS user_email,
+                     b.guide_id, g.name AS guide_name, g.rate_per_day AS guide_rate_per_day
+            FROM bookings b
+            LEFT JOIN hotels h ON h.id = b.hotel_id
+            LEFT JOIN tour_packages p ON p.id = b.package_id
+            LEFT JOIN users u ON u.id = b.user_id
+            LEFT JOIN guides g ON g.id = b.guide_id
+            WHERE 1=1";
         if ($status_filter)
             $sql .= " AND b.status = '" . $conn->real_escape_string($status_filter) . "'";
         $sql .= " ORDER BY b.created_at DESC LIMIT 500";
@@ -124,15 +133,19 @@ if ($method === 'GET') {
         if ($is_admin && $filter_user_id)
             $user_id = $filter_user_id;
         $sql = "SELECT b.id, b.user_id, b.hotel_id, b.package_id,
-                       COALESCE(h.name, p.name) AS booking_name,
-                       CAST(b.total_amount AS DECIMAL(10,2)) AS total_amount,
-                       b.status, b.check_in, b.check_out, b.nights, b.guest_count,
-                       b.created_at, b.updated_at,
-                       CASE WHEN b.hotel_id IS NOT NULL THEN 'hotel' ELSE 'package' END AS booking_type
-                FROM bookings b
-                LEFT JOIN hotels h ON h.id = b.hotel_id
-                LEFT JOIN tour_packages p ON p.id = b.package_id
-                WHERE b.user_id = ?";
+                   COALESCE(h.name, p.name) AS booking_name,
+                   CAST(b.total_amount AS DECIMAL(10,2)) AS total_amount,
+                   b.status, b.check_in, b.check_out, b.nights, b.guest_count,
+                   b.created_at, b.updated_at,
+                   CASE WHEN b.hotel_id IS NOT NULL THEN 'hotel' ELSE 'package' END AS booking_type,
+                     u.name AS user_name, u.email AS user_email,
+                     b.guide_id, g.name AS guide_name, g.rate_per_day AS guide_rate_per_day
+            FROM bookings b
+            LEFT JOIN hotels h ON h.id = b.hotel_id
+            LEFT JOIN tour_packages p ON p.id = b.package_id
+            LEFT JOIN users u ON u.id = b.user_id
+            LEFT JOIN guides g ON g.id = b.guide_id
+            WHERE b.user_id = ?";
         if ($status_filter)
             $sql .= " AND b.status = '" . $conn->real_escape_string($status_filter) . "'";
         $sql .= " ORDER BY b.created_at DESC LIMIT 500";
@@ -147,6 +160,7 @@ if ($method === 'GET') {
         $row['total_amount'] = (float) $row['total_amount'];
         $row['nights'] = isset($row['nights']) ? intval($row['nights']) : 0;
         $row['guest_count'] = isset($row['guest_count']) ? intval($row['guest_count']) : 0;
+        $row['guide_rate_per_day'] = isset($row['guide_rate_per_day']) ? (float) $row['guide_rate_per_day'] : null;
 
         if ($row['hotel_id']) {
             $rooms_stmt = safe_prepare($conn, "
@@ -216,15 +230,93 @@ if ($method === 'POST') {
             json_exit(['success' => false, 'error' => 'Package not found'], 404);
 
         $package_price = (float) $pkg['price'];
+        // If an offer_id is provided, attempt to apply discount to package price
+        if (isset($input['offer_id']) && !empty($input['offer_id'])) {
+            $offer_id = intval($input['offer_id']);
+            // ensure the offer applies to this package
+            $chk = $conn->prepare("SELECT 1 FROM package_offers WHERE package_id = ? AND offer_id = ?");
+            $chk->bind_param('ii', $package_id, $offer_id);
+            $chk->execute();
+            $g = $chk->get_result()->fetch_assoc();
+            if ($g) {
+                $ofstmt = safe_prepare($conn, "SELECT discount_type, discount_value FROM offers WHERE id = ?");
+                $ofstmt->bind_param('i', $offer_id);
+                $ofstmt->execute();
+                $of = $ofstmt->get_result()->fetch_assoc();
+                if ($of) {
+                    $dtype = $of['discount_type'];
+                    $dval = (float) $of['discount_value'];
+                    if ($dtype === 'percentage') {
+                        $package_price = $package_price * (1 - ($dval / 100.0));
+                    } else {
+                        $package_price = max(0.0, $package_price - $dval);
+                    }
+                }
+            }
+        }
         $status = 'pending';
 
+        // capture optional guide_id
+        $guide_id = isset($input['guide_id']) ? (is_null($input['guide_id']) ? null : intval($input['guide_id'])) : null;
+
         // If user also selected hotel & rooms for this package (package + hotel)
-        if (!empty($input['hotel_id']) && !empty($input['room_ids'])) {
-            // Use the hotel booking flow to calculate total_amount and validate capacity
+        if (!empty($input['hotel_id'])) {
+            // hotel selected for this package booking. room_ids may be provided
+            // but if not provided we will fetch the predefined rooms mapped for this package+hotel
+            $check_in = $input['check_in'] ?? null;
+            $check_out = $input['check_out'] ?? null;
+            $nights = 0;
+            if (!empty($check_in) && !empty($check_out)) {
+                try {
+                    $ci = new DateTime($check_in);
+                    $co = new DateTime($check_out);
+                    $nights = $ci->diff($co)->days;
+                    if ($nights < 0)
+                        $nights = 0;
+                } catch (Exception $e) {
+                    $nights = isset($input['nights']) ? intval($input['nights']) : 0;
+                }
+            } else {
+                $nights = isset($input['nights']) ? intval($input['nights']) : 0;
+            }
             $hotel_id = intval($input['hotel_id']);
-            $room_ids = $input['room_ids'];
+            $room_ids = isset($input['room_ids']) ? $input['room_ids'] : [];
+
+            // If client did not supply explicit room_ids, load mapped rooms from package_hotel_rooms
+            if ((!is_array($room_ids) || count($room_ids) === 0)) {
+                $map = safe_prepare($conn, "SELECT room_id FROM package_hotel_rooms WHERE package_id = ? AND hotel_id = ? ORDER BY id ASC");
+                $map->bind_param('ii', $package_id, $hotel_id);
+                $map->execute();
+                $mr = $map->get_result();
+                $room_ids = [];
+                while ($rr = $mr->fetch_assoc()) {
+                    $room_ids[] = intval($rr['room_id']);
+                }
+                if (count($room_ids) === 0) {
+                    json_exit(['success' => false, 'error' => 'No rooms preselected for this package and hotel.'], 400);
+                }
+            }
+
             if (!is_array($room_ids) || count($room_ids) === 0)
                 json_exit(['success' => false, 'error' => 'room_ids required for hotel inside package'], 400);
+            // prepare nights value (compute from dates if provided) and then use hotel booking flow to calculate total_amount and validate capacity
+            $check_in = $input['check_in'] ?? null;
+            $check_out = $input['check_out'] ?? null;
+            // compute nights if checkin/out provided
+            $nights = 0;
+            if (!empty($check_in) && !empty($check_out)) {
+                try {
+                    $ci = new DateTime($check_in);
+                    $co = new DateTime($check_out);
+                    $nights = $ci->diff($co)->days;
+                    if ($nights < 0)
+                        $nights = 0;
+                } catch (Exception $e) {
+                    $nights = isset($input['nights']) ? intval($input['nights']) : 0;
+                }
+            } else {
+                $nights = isset($input['nights']) ? intval($input['nights']) : 0;
+            }
 
             // compute room sums
             $placeholders = implode(',', array_fill(0, count($room_ids), '?'));
@@ -246,20 +338,42 @@ if ($method === 'POST') {
 
             $max_capacity = (int) $room_data['max_capacity'];
             $room_total = (float) $room_data['total_price'];
+            // multiply by nights to reflect total room cost across duration
+            if ($nights > 0)
+                $room_total = $room_total * $nights;
 
             if ($guest_count > $max_capacity)
                 json_exit(['success' => false, 'error' => "Guest limit exceeded! Max allowed: $max_capacity"], 400);
-
-            // total_amount = package price + rooms price (you can adjust logic if package price includes some nights)
+            // total_amount = package price + rooms price (rooms price already multiplied by nights)
             $total_amount = $package_price + $room_total;
-            // nights can be optional for package+hotel: if included in input use it, else leave null/0
-            $nights = isset($input['nights']) ? intval($input['nights']) : 0;
+            // if guide selected, fetch guide rate and add guide fee (rate_per_day * days)
+            $guide_fee = 0.0;
+            if ($guide_id !== null) {
+                $gstmt = safe_prepare($conn, "SELECT rate_per_day FROM guides WHERE id = ?");
+                $gstmt->bind_param('i', $guide_id);
+                $gstmt->execute();
+                $g = $gstmt->get_result()->fetch_assoc();
+                if (!$g)
+                    json_exit(['success' => false, 'error' => 'Selected guide not found'], 400);
+                $rate = (float) $g['rate_per_day'];
+                $guide_days = $nights > 0 ? $nights : (isset($pkg['duration_days']) ? intval($pkg['duration_days']) : 1);
+                $guide_fee = $rate * $guide_days;
+                $total_amount += $guide_fee;
+            }
 
-            // Insert booking with package_id and hotel_id
-            $ins = safe_prepare($conn, "INSERT INTO bookings (user_id, hotel_id, package_id, total_amount, status, check_in, check_out, nights, guest_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            // Insert booking with package_id and hotel_id (include guide_id if provided)
+            if ($guide_id !== null) {
+                $ins = safe_prepare($conn, "INSERT INTO bookings (user_id, hotel_id, package_id, total_amount, status, check_in, check_out, nights, guest_count, guide_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            } else {
+                $ins = safe_prepare($conn, "INSERT INTO bookings (user_id, hotel_id, package_id, total_amount, status, check_in, check_out, nights, guest_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+            }
             $check_in = $input['check_in'] ?? null;
             $check_out = $input['check_out'] ?? null;
-            $ins->bind_param('iiidsssii', $user_id, $hotel_id, $package_id, $total_amount, $status, $check_in, $check_out, $nights, $guest_count);
+            if ($guide_id !== null) {
+                $ins->bind_param('iiidsssiii', $user_id, $hotel_id, $package_id, $total_amount, $status, $check_in, $check_out, $nights, $guest_count, $guide_id);
+            } else {
+                $ins->bind_param('iiidsssii', $user_id, $hotel_id, $package_id, $total_amount, $status, $check_in, $check_out, $nights, $guest_count);
+            }
             if (!$ins->execute())
                 json_exit(['success' => false, 'error' => $ins->error], 500);
             $booking_id = $conn->insert_id;
@@ -281,8 +395,25 @@ if ($method === 'POST') {
         }
 
         // If only package (no hotel)
-        $ins = safe_prepare($conn, "INSERT INTO bookings (user_id, package_id, total_amount, status, guest_count) VALUES (?, ?, ?, ?, ?)");
-        $ins->bind_param('iidsi', $user_id, $package_id, $package_price, $status, $guest_count);
+        if ($guide_id !== null) {
+            $ins = safe_prepare($conn, "INSERT INTO bookings (user_id, package_id, total_amount, status, guest_count, guide_id) VALUES (?, ?, ?, ?, ?, ?)");
+            // include guide fee into total_amount
+            $guide_fee = 0.0;
+            $pkg_days = isset($pkg['duration_days']) ? intval($pkg['duration_days']) : 1;
+            $gstmt = safe_prepare($conn, "SELECT rate_per_day FROM guides WHERE id = ?");
+            $gstmt->bind_param('i', $guide_id);
+            $gstmt->execute();
+            $g = $gstmt->get_result()->fetch_assoc();
+            if (!$g)
+                json_exit(['success' => false, 'error' => 'Selected guide not found'], 400);
+            $rate = (float) $g['rate_per_day'];
+            $guide_fee = $rate * $pkg_days;
+            $total_with_guide = $package_price + $guide_fee;
+            $ins->bind_param('iidsii', $user_id, $package_id, $total_with_guide, $status, $guest_count, $guide_id);
+        } else {
+            $ins = safe_prepare($conn, "INSERT INTO bookings (user_id, package_id, total_amount, status, guest_count) VALUES (?, ?, ?, ?, ?)");
+            $ins->bind_param('iidsi', $user_id, $package_id, $package_price, $status, $guest_count);
+        }
         if ($ins->execute()) {
             json_exit(['success' => true, 'message' => 'Package booking created', 'id' => $conn->insert_id], 201);
         } else {
@@ -333,13 +464,36 @@ if ($method === 'POST') {
 
     $max_capacity = (int) $room_data['max_capacity'];
     $total_amount = (float) $room_data['total_price'] * $nights;
-
+    // if a guide is requested for a hotel-only booking, add guide fee based on nights
+    $guide_fee = 0.0;
+    if (isset($input['guide_id']) && $input['guide_id'] !== null) {
+        $hid_guide = intval($input['guide_id']);
+        $gstmt = safe_prepare($conn, "SELECT rate_per_day FROM guides WHERE id = ?");
+        $gstmt->bind_param('i', $hid_guide);
+        $gstmt->execute();
+        $g = $gstmt->get_result()->fetch_assoc();
+        if (!$g)
+            json_exit(['success' => false, 'error' => 'Selected guide not found'], 400);
+        $rate = (float) $g['rate_per_day'];
+        $guide_fee = $rate * $nights;
+        $total_amount += $guide_fee;
+        // attach guide id to booking insert below by overwriting/setting variable
+        $hotel_guide_id = $hid_guide;
+    } else {
+        $hotel_guide_id = null;
+    }
     if ($guest_count > $max_capacity)
         json_exit(['success' => false, 'error' => "Guest limit exceeded! Max allowed: $max_capacity"], 400);
 
     $status = 'pending';
-    $ins = safe_prepare($conn, "INSERT INTO bookings (user_id, hotel_id, total_amount, status, check_in, check_out, nights, guest_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
-    $ins->bind_param('iidsssii', $user_id, $hotel_id, $total_amount, $status, $check_in, $check_out, $nights, $guest_count);
+    // include guide_id if provided for hotel-only bookings
+    if ($hotel_guide_id !== null) {
+        $ins = safe_prepare($conn, "INSERT INTO bookings (user_id, hotel_id, total_amount, status, check_in, check_out, nights, guest_count, guide_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
+        $ins->bind_param('iidsssiii', $user_id, $hotel_id, $total_amount, $status, $check_in, $check_out, $nights, $guest_count, $hotel_guide_id);
+    } else {
+        $ins = safe_prepare($conn, "INSERT INTO bookings (user_id, hotel_id, total_amount, status, check_in, check_out, nights, guest_count) VALUES (?, ?, ?, ?, ?, ?, ?, ?)");
+        $ins->bind_param('iidsssii', $user_id, $hotel_id, $total_amount, $status, $check_in, $check_out, $nights, $guest_count);
+    }
     if (!$ins->execute())
         json_exit(['success' => false, 'error' => $ins->error], 500);
     $booking_id = $conn->insert_id;

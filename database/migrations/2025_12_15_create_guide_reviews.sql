@@ -1,0 +1,15 @@
+-- Migration: create guide_reviews table
+START TRANSACTION;
+
+CREATE TABLE IF NOT EXISTS guide_reviews (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  guide_id INT NOT NULL,
+  user_id INT DEFAULT NULL,
+  rating INT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment TEXT,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY (guide_id) REFERENCES guides(id) ON DELETE CASCADE,
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+ ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+COMMIT;

@@ -7,41 +7,15 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { User, Mail, Phone, MapPin, Calendar, CreditCard } from "lucide-react";
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import { toast } from 'sonner';
 
 const Profile = () => {
   const [user, setUser] = useState<any>(null);
-
-  const bookings = [
-    {
-      id: 1,
-      hotel: "Sea Pearl Beach Resort",
-      location: "Cox's Bazar",
-      checkIn: "2024-12-15",
-      checkOut: "2024-12-18",
-      status: "Confirmed",
-      amount: "$450",
-    },
-    {
-      id: 2,
-      hotel: "Grand Sultan Tea Resort",
-      location: "Sylhet",
-      checkIn: "2025-01-10",
-      checkOut: "2025-01-13",
-      status: "Pending",
-      amount: "$320",
-    },
-    {
-      id: 3,
-      hotel: "Hill View Resort",
-      location: "Bandarban",
-      checkIn: "2024-11-20",
-      checkOut: "2024-11-23",
-      status: "Completed",
-      amount: "$280",
-    },
-  ];
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loadingBookings, setLoadingBookings] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const loadLocal = () => {
@@ -72,6 +46,28 @@ const Profile = () => {
     loadLocal();
     checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (user) fetchBookings();
+  }, [user]);
+
+  const fetchBookings = async () => {
+    setLoadingBookings(true);
+    try {
+      const res = await fetch(`${API_ENDPOINTS.BOOKINGS_GET}`, { credentials: 'include' });
+      const js = await res.json();
+      if (js.success) {
+        setBookings(js.data || []);
+      } else {
+        setBookings([]);
+      }
+    } catch (e) {
+      console.error('Failed to load bookings', e);
+      setBookings([]);
+    } finally {
+      setLoadingBookings(false);
+    }
+  };
 
   const handleSave = () => {
     // No update endpoint yet; persist to localStorage so UI reflects changes.
@@ -166,48 +162,54 @@ const Profile = () => {
             
             <TabsContent value="bookings" className="mt-6">
               <div className="space-y-4">
-                {bookings.map((booking) => (
-                  <Card key={booking.id}>
-                    <CardContent className="p-6">
-                      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-                        <div className="space-y-2">
-                          <h3 className="text-xl font-semibold text-foreground">{booking.hotel}</h3>
-                          <div className="flex items-center gap-2 text-muted-foreground">
-                            <MapPin className="w-4 h-4" />
-                            <span>{booking.location}</span>
+                {loadingBookings ? (
+                  <div className="text-center py-8 text-sm text-muted-foreground">Loading bookings...</div>
+                ) : bookings.length === 0 ? (
+                  <div className="text-center py-8 text-sm text-muted-foreground">You have no bookings yet.</div>
+                ) : (
+                  bookings.map((booking) => (
+                    <Card key={booking.id}>
+                      <CardContent className="p-6">
+                        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+                          <div className="space-y-2">
+                            <h3 className="text-xl font-semibold text-foreground">{booking.booking_name || `Booking #${booking.id}`}</h3>
+                            <div className="flex items-center gap-2 text-muted-foreground">
+                              <MapPin className="w-4 h-4" />
+                              <span>{(booking.booking_type || '').toString().replace(/^(.)/, s => s.toUpperCase())}</span>
+                            </div>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4" />
+                                <span>Check-in: {booking.check_in ?? booking.checkIn ?? '-'}</span>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Calendar className="w-4 h-4" />
+                                <span>Check-out: {booking.check_out ?? booking.checkOut ?? '-'}</span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4" />
-                              <span>Check-in: {booking.checkIn}</span>
+
+                          <div className="flex flex-col items-start md:items-end gap-2">
+                            <div className="flex items-center gap-2 text-lg font-semibold text-foreground">
+                              <CreditCard className="w-5 h-5" />
+                              <span>৳{Number(booking.total_amount || booking.amount || 0).toFixed(2)}</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                              <Calendar className="w-4 h-4" />
-                              <span>Check-out: {booking.checkOut}</span>
-                            </div>
+                            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                              (booking.status || '').toLowerCase() === 'confirmed' 
+                                ? 'bg-primary/10 text-primary' 
+                                : (booking.status || '').toLowerCase() === 'pending'
+                                ? 'bg-accent/10 text-accent'
+                                : 'bg-muted text-muted-foreground'
+                            }`}>
+                              {String(booking.status || booking.status?.toString() || '').length ? booking.status : (booking.status === null ? 'N/A' : String(booking.status))}
+                            </span>
+                            <Button variant="outline" size="sm" onClick={() => navigate(`/bookings/${booking.id}`)}>View Details</Button>
                           </div>
                         </div>
-                        
-                        <div className="flex flex-col items-start md:items-end gap-2">
-                          <div className="flex items-center gap-2 text-lg font-semibold text-foreground">
-                            <CreditCard className="w-5 h-5" />
-                            <span>{booking.amount}</span>
-                          </div>
-                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                            booking.status === "Confirmed" 
-                              ? "bg-primary/10 text-primary" 
-                              : booking.status === "Pending"
-                              ? "bg-accent/10 text-accent"
-                              : "bg-muted text-muted-foreground"
-                          }`}>
-                            {booking.status}
-                          </span>
-                          <Button variant="outline" size="sm">View Details</Button>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                      </CardContent>
+                    </Card>
+                  ))
+                )}
               </div>
             </TabsContent>
           </Tabs>

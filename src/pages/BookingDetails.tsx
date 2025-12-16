@@ -50,6 +50,7 @@ const BookingDetails = () => {
   const [booking, setBooking] = useState<BookingDetail | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
   const [loading, setLoading] = useState(true);
+  const [payments, setPayments] = useState<any[]>([]);
 
   useEffect(() => {
     fetchBookingDetails();
@@ -62,6 +63,7 @@ const BookingDetails = () => {
       const json = await res.json();
       if (json.success && json.data) {
         setBooking(json.data);
+        fetchPayments(json.data.id);
       } else {
         toast.error(json.error || 'Booking not found');
       }
@@ -71,6 +73,32 @@ const BookingDetails = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchPayments = async (bId?: number) => {
+    const idToUse = bId || bookingId;
+    try {
+      const res = await fetch(`${API_ENDPOINTS.PAYMENTS_GET}?booking_id=${idToUse}`, { credentials: 'include' });
+      const js = await res.json();
+      if (js.success) setPayments(js.data || []);
+      else setPayments([]);
+    } catch (e) { console.error(e); setPayments([]); }
+  };
+
+  const payNow = async () => {
+    if (!booking) return;
+    if (!confirm('Simulate payment now and mark as paid?')) return;
+    try {
+      const payload = { booking_id: booking.id, method: 'manual', amount: booking.total_amount, status: 'paid', transaction_id: 'manual-' + Date.now() };
+      const res = await fetch(API_ENDPOINTS.PAYMENTS_POST, { method: 'POST', credentials: 'include', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+      const js = await res.json();
+      if (js.success) {
+        toast.success('Payment recorded');
+        fetchPayments();
+        // refresh booking to get updated status
+        fetchBookingDetails();
+      } else toast.error(js.error || 'Payment failed');
+    } catch (e) { console.error(e); toast.error('Error'); }
   };
 
   const cancelBooking = async () => {
@@ -283,20 +311,44 @@ const BookingDetails = () => {
                       </span>
                     </div>
 
-                    <div className="border-t pt-4 space-y-3">
-                      {booking.status !== 'cancelled' && booking.status !== 'completed' && (
-                        <Button
-                          variant="destructive"
-                          className="w-full"
-                          onClick={cancelBooking}
-                        >
-                          Cancel Booking
+                      <div className="border-t pt-4 space-y-3">
+                        {booking.status !== 'cancelled' && booking.status !== 'completed' && (
+                          <Button
+                            variant="destructive"
+                            className="w-full"
+                            onClick={cancelBooking}
+                          >
+                            Cancel Booking
+                          </Button>
+                        )}
+                        {/* Simulate a payment for testing */}
+                        {booking.status === 'pending' && (
+                          <Button className="w-full" onClick={payNow}>Pay Now (simulate)</Button>
+                        )}
+                        <Button asChild className="w-full">
+                          <Link to="/bookings">Back to Bookings</Link>
                         </Button>
-                      )}
-                      <Button asChild className="w-full">
-                        <Link to="/bookings">Back to Bookings</Link>
-                      </Button>
-                    </div>
+                      </div>
+
+                      {/* Payment history */}
+                      <div className="mt-4">
+                        <h4 className="text-sm font-semibold mb-2">Payments</h4>
+                        <div className="space-y-2">
+                          {payments.length === 0 ? (
+                            <div className="text-sm text-muted-foreground">No payments yet</div>
+                          ) : (
+                            payments.map(p => (
+                              <div key={p.id} className="p-2 border rounded flex justify-between items-center">
+                                <div>
+                                  <div className="font-medium">{p.method} • ৳{p.amount.toFixed(2)}</div>
+                                  <div className="text-xs text-muted-foreground">{p.status} • {p.transaction_id || ''} • {new Date(p.created_at).toLocaleString()}</div>
+                                </div>
+                                <div className="text-sm font-medium">{p.status === 'paid' ? <span className="text-green-600">Paid</span> : <span className="text-gray-600">{p.status}</span>}</div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
                   </CardContent>
                 </Card>
               </aside>

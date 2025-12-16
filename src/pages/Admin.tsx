@@ -7,7 +7,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import { toast } from 'sonner';
 import { Loader, Plus, Trash2, Eye, Calendar, Users, DollarSign, Map, Building2, Sparkles, DoorOpen, CheckCircle2, MessageSquare } from 'lucide-react';
+import { MapPin } from 'lucide-react';
+import AdminGuides from '@/components/AdminGuides';
+import AdminPackageAssignments from '@/components/AdminPackageAssignments';
+import AdminOffers from '@/components/AdminOffers';
 import AdminFacilityEditor from '@/components/AdminFacilityEditor';
+import AdminPayments from '@/components/AdminPayments';
+import EditDestinationModal from '@/components/EditDestinationModal';
 // Add this import for the editor UI
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -119,6 +125,9 @@ const Admin = () => {
       setLoading(false);
     }
   };
+
+  const [editDest, setEditDest] = useState<any>(null);
+  const [editDestOpen, setEditDestOpen] = useState(false);
 
   // --- Hotels tab state & handlers ---
   const [destOptions, setDestOptions] = useState<Array<any>>([]);
@@ -425,6 +434,39 @@ const Admin = () => {
             Tour Packages
           </button>
           <button
+            onClick={() => setActiveTab('guides')}
+            className={`px-4 py-3 font-medium border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === 'guides'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <MapPin className="h-4 w-4" />
+            Guides
+          </button>
+          <button
+            onClick={() => setActiveTab('package_assignments')}
+            className={`px-4 py-3 font-medium border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === 'package_assignments'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Map className="h-4 w-4" />
+            Package Assignments
+          </button>
+          <button
+            onClick={() => setActiveTab('offers')}
+            className={`px-4 py-3 font-medium border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === 'offers'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Sparkles className="h-4 w-4" />
+            Offers
+          </button>
+          <button
             onClick={() => setActiveTab('rooms')}
             className={`px-4 py-3 font-medium border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
               activeTab === 'rooms'
@@ -445,6 +487,17 @@ const Admin = () => {
           >
             <CheckCircle2 className="h-4 w-4" />
             Bookings
+          </button>
+          <button
+            onClick={() => setActiveTab('payments')}
+            className={`px-4 py-3 font-medium border-b-2 transition whitespace-nowrap flex items-center gap-2 ${
+              activeTab === 'payments'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <DollarSign className="h-4 w-4" />
+            Payments
           </button>
           <button
             onClick={() => setActiveTab('reviews')}
@@ -645,6 +698,39 @@ const Admin = () => {
                 </Button>
               </div>
             </form>
+            {/* Existing destinations list */}
+            <div className="mt-8">
+              <h3 className="text-lg font-semibold mb-4">Existing Destinations</h3>
+              <div className="grid grid-cols-1 gap-3">
+                {destinations.map((d: any) => (
+                  <div key={d.id} className="border border-border rounded-lg p-4 flex items-center justify-between">
+                    <div>
+                      <div className="font-medium">{d.name}</div>
+                      <div className="text-sm text-muted-foreground">{d.description?.slice(0, 100)}</div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button onClick={() => { setEditDest(d); setEditDestOpen(true); }}>Edit</Button>
+                      <Button variant="destructive" onClick={async () => {
+                        if (!window.confirm('Delete destination?')) return;
+                        try {
+                          const res = await fetch(API_ENDPOINTS.DESTINATIONS_DELETE, {
+                            method: 'DELETE',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ id: d.id }),
+                          });
+                          const json = await res.json();
+                          if (json.success) {
+                            toast.success('Deleted');
+                            fetchDestinations();
+                          } else toast.error(json.error || 'Delete failed');
+                        } catch (err) { toast.error('Delete error'); }
+                      }}>Delete</Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
 
@@ -956,6 +1042,9 @@ const Admin = () => {
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-2">
                             <h4 className="text-lg font-semibold">{booking.booking_name}</h4>
+                              {booking.user_name && (
+                                <span className="text-sm text-muted-foreground ml-2">Booked by: <strong>{booking.user_name}</strong>{booking.user_email && <span className="ml-2">• {booking.user_email}</span>}</span>
+                              )}
                             <span className="text-xs px-2 py-1 bg-blue-100 text-blue-800 rounded">
                               {isHotel ? 'Hotel' : 'Package'}
                             </span>
@@ -1038,6 +1127,46 @@ const Admin = () => {
           </div>
         )}
 
+        {/* Guides Tab */}
+        {activeTab === 'guides' && (
+          <div className="bg-card border border-border rounded-lg p-8">
+            <h2 className="text-2xl font-bold mb-4">Guides</h2>
+            <div>
+              <AdminGuides />
+            </div>
+          </div>
+        )}
+
+        {/* Payments Tab */}
+        {activeTab === 'payments' && (
+          <div className="bg-card border border-border rounded-lg p-8">
+            <h2 className="text-2xl font-bold mb-4">Payments</h2>
+            <div>
+              <AdminPayments />
+            </div>
+          </div>
+        )}
+
+        {/* Package Assignments Tab */}
+        {activeTab === 'package_assignments' && (
+          <div className="bg-card border border-border rounded-lg p-8">
+            <h2 className="text-2xl font-bold mb-4">Package Assignments</h2>
+            <div>
+              <AdminPackageAssignments />
+            </div>
+          </div>
+        )}
+
+        {/* Offers Tab */}
+        {activeTab === 'offers' && (
+          <div className="bg-card border border-border rounded-lg p-8">
+            <h2 className="text-2xl font-bold mb-4">Offers</h2>
+            <div>
+              <AdminOffers />
+            </div>
+          </div>
+        )}
+
         {/* Reviews Tab */}
         {activeTab === 'reviews' && (
           <div className="bg-card border border-border rounded-lg p-8">
@@ -1045,6 +1174,12 @@ const Admin = () => {
             <p className="text-muted-foreground">Review management features coming soon. Reviews can be viewed and deleted from the homepage.</p>
           </div>
         )}
+        <EditDestinationModal
+          destination={editDest}
+          open={editDestOpen}
+          onOpenChange={(v) => { setEditDestOpen(v); if (!v) setEditDest(null); }}
+          onUpdated={() => fetchDestinations()}
+        />
       </div>
     </div>
   );
@@ -1064,6 +1199,12 @@ function TourPackagesAdmin() {
     duration_days: 1,
     image_url: '',
     destinations: [] as number[],
+    breakfast: 0,
+    lunch: 0,
+    dinner: 0,
+    transport: '',
+    start_date: '',
+    end_date: '',
   });
   const [saving, setSaving] = React.useState(false);
 
@@ -1094,11 +1235,17 @@ function TourPackagesAdmin() {
       duration_days: pkg.duration_days,
       image_url: pkg.image_url || '',
       destinations: pkg.destinations ? pkg.destinations.map((d: any) => d.id) : [],
+      breakfast: pkg.breakfast ? 1 : 0,
+      lunch: pkg.lunch ? 1 : 0,
+      dinner: pkg.dinner ? 1 : 0,
+      transport: pkg.transport || '',
+      start_date: pkg.start_date || '',
+      end_date: pkg.end_date || '',
     });
   }
   function startCreate() {
     setEditing(null);
-    setForm({ name: '', description: '', price: '', duration_days: 1, image_url: '', destinations: [] });
+    setForm({ name: '', description: '', price: '', duration_days: 1, image_url: '', destinations: [], breakfast: 0, lunch: 0, dinner: 0, transport: '', start_date: '', end_date: '' });
   }
   async function save() {
     setSaving(true);
@@ -1114,6 +1261,12 @@ function TourPackagesAdmin() {
         price: parseFloat(form.price),
         duration_days: form.duration_days,
         image_url: form.image_url,
+        breakfast: form.breakfast ? 1 : 0,
+        lunch: form.lunch ? 1 : 0,
+        dinner: form.dinner ? 1 : 0,
+        transport: form.transport || null,
+        start_date: form.start_date || null,
+        end_date: form.end_date || null,
       }),
     });
     const json = await res.json();
@@ -1150,6 +1303,36 @@ function TourPackagesAdmin() {
           <input value={form.duration_days} onChange={e => setForm(f => ({ ...f, duration_days: Number(e.target.value) }))} placeholder="Duration (days)" type="number" className="px-3 py-2 border rounded-md" required />
           <input value={form.image_url} onChange={e => setForm(f => ({ ...f, image_url: e.target.value }))} placeholder="Image URL" className="px-3 py-2 border rounded-md" />
           <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} placeholder="Description" className="px-3 py-2 border rounded-md md:col-span-2" />
+          <div>
+            <label className="inline-flex items-center gap-2">
+              <input type="checkbox" checked={!!form.breakfast} onChange={e => setForm(f => ({ ...f, breakfast: e.target.checked ? 1 : 0 }))} />
+              <span className="text-sm">Include Breakfast</span>
+            </label>
+            <label className="ml-4 inline-flex items-center gap-2">
+              <input type="checkbox" checked={!!form.lunch} onChange={e => setForm(f => ({ ...f, lunch: e.target.checked ? 1 : 0 }))} />
+              <span className="text-sm">Include Lunch</span>
+            </label>
+            <label className="ml-4 inline-flex items-center gap-2">
+              <input type="checkbox" checked={!!form.dinner} onChange={e => setForm(f => ({ ...f, dinner: e.target.checked ? 1 : 0 }))} />
+              <span className="text-sm">Include Dinner</span>
+            </label>
+          </div>
+
+          <div>
+            <Label className="text-base font-medium">Transport (optional)</Label>
+            <Input value={form.transport} onChange={e => setForm(f => ({ ...f, transport: e.target.value }))} placeholder="e.g., Airport pickup, Private coach" className="mt-2" />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <Label className="text-base font-medium">Start Date</Label>
+              <Input type="date" value={form.start_date} onChange={e => setForm(f => ({ ...f, start_date: e.target.value }))} className="mt-2" />
+            </div>
+            <div>
+              <Label className="text-base font-medium">End Date</Label>
+              <Input type="date" value={form.end_date} onChange={e => setForm(f => ({ ...f, end_date: e.target.value }))} className="mt-2" />
+            </div>
+          </div>
           <div className="md:col-span-2">
             <label className="font-medium">Destinations</label>
             <div className="flex flex-wrap gap-2 mt-2">

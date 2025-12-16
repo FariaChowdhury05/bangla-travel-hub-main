@@ -6,6 +6,7 @@ USE bangla_travel_hub;
 -- Create Reviews Table
 CREATE TABLE IF NOT EXISTS reviews (
     id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT DEFAULT NULL,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
     location VARCHAR(255) NOT NULL,
@@ -16,6 +17,7 @@ CREATE TABLE IF NOT EXISTS reviews (
     status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id),
     INDEX idx_status (status),
     INDEX idx_created_at (created_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

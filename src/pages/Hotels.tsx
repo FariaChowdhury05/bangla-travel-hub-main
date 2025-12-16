@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Card, CardContent } from '@/components/ui/card';
 import { Star, MapPin } from 'lucide-react';
 import HotelDetailsModal from '@/components/HotelDetailsModal';
+import EditHotelModal from '@/components/EditHotelModal';
 import { API_ENDPOINTS } from '@/lib/api-config';
 import { toast } from 'sonner';
 import { Loader } from 'lucide-react';
@@ -32,6 +33,8 @@ const Hotels = () => {
   const [user, setUser] = useState<any>(null);
   const [selectedHotel, setSelectedHotel] = useState<any>(null);
   const [hotelModalOpen, setHotelModalOpen] = useState(false);
+  const [editHotel, setEditHotel] = useState<any>(null);
+  const [editOpen, setEditOpen] = useState(false);
 
   const fetchHotels = async () => {
     setLoading(true);
@@ -154,7 +157,10 @@ const Hotels = () => {
                     <div className="flex items-center justify-between">
                       <div className="flex gap-2">
                         {user && user.role === 'admin' && (
-                          <Button variant="destructive" onClick={(e) => { e.stopPropagation(); deleteHotel(hotel.id); }}>Delete</Button>
+                          <>
+                            <Button variant="destructive" onClick={(e) => { e.stopPropagation(); deleteHotel(hotel.id); }}>Delete</Button>
+                            <Button onClick={(e) => { e.stopPropagation(); setEditHotel(hotel); setEditOpen(true); }}>Edit</Button>
+                          </>
                         )}
                         <Button asChild>
                           <Link to={`/?destination_id=${hotel.destination_id}`}>View Destination</Link>
@@ -173,6 +179,9 @@ const Hotels = () => {
       <Footer />
       {selectedHotel && (
         <HotelDetailsModal hotel={selectedHotel} open={hotelModalOpen} onOpenChange={(v) => setHotelModalOpen(v)} />
+      )}
+      {editHotel && (
+        <EditHotelModal hotel={editHotel} open={editOpen} onOpenChange={(v) => { setEditOpen(v); if (!v) setEditHotel(null); }} onUpdated={() => fetchHotels()} />
       )}
     </div>
   );

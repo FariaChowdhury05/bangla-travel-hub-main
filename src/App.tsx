@@ -2,13 +2,14 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Routes, Route } from "react-router-dom";
 import Index from "./pages/Index";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Hotels from "./pages/Hotels";
 import HotelDetails from "./pages/HotelDetails";
 import TourPackages from "./pages/TourPackages";
+import PackageDetails from "./pages/PackageDetails";
 import NewBooking from "./pages/NewBooking";
 import Guides from "./pages/Guides";
 import Payments from "./pages/Payments";
@@ -26,7 +27,7 @@ const App = () => (
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      <BrowserRouter>
+      <HashRouter>
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/login" element={<Login />} />
@@ -36,6 +37,7 @@ const App = () => (
           <Route path="/bookings" element={<Bookings />} />
           <Route path="/bookings/new" element={<NewBooking />} />
           <Route path="/bookings/:id" element={<BookingDetails />} />
+          <Route path="/tour-packages/:id" element={<PackageDetails />} />
           <Route path="/tour-packages" element={<TourPackages />} />
           <Route path="/guides" element={<Guides />} />
           <Route path="/payments" element={<Payments />} />
@@ -45,7 +47,7 @@ const App = () => (
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );

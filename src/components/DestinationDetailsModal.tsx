@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Star, MapPin, Hotel, Calendar, Info } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -64,6 +64,7 @@ const DestinationDetailsModal = ({ destination, open, onOpenChange }: Destinatio
         <DialogHeader>
           <DialogTitle className="text-2xl">{destination.name}</DialogTitle>
         </DialogHeader>
+        <DialogDescription className="sr-only">Information about the destination and its hotels.</DialogDescription>
 
         <div className="space-y-4">
           {/* Image */}

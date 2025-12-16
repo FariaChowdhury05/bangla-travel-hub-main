@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/select";
 import { Star } from "lucide-react";
 import { toast } from "sonner";
+import { useEffect } from "react";
 import { API_ENDPOINTS, TOUR_OPTIONS } from "@/lib/api-config";
 
 interface ReviewFormModalProps {
@@ -39,6 +40,24 @@ const ReviewFormModal = ({ onReviewSubmitted }: ReviewFormModalProps) => {
     tour: "",
     comment: "",
   });
+  const [loggedIn, setLoggedIn] = useState(false);
+
+  useEffect(() => {
+    // Check auth and prefill name/email when logged in
+    const check = async () => {
+      try {
+        const res = await fetch(API_ENDPOINTS.AUTH_CHECK, { credentials: 'include' });
+        const js = await res.json();
+        if (js.success && js.isLoggedIn && js.user) {
+          setLoggedIn(true);
+          setFormData((prev) => ({ ...prev, name: js.user.name || '', email: js.user.email || '' }));
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    check();
+  }, []);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -56,8 +75,7 @@ const ReviewFormModal = ({ onReviewSubmitted }: ReviewFormModalProps) => {
 
     // Validation
     if (
-      !formData.name ||
-      !formData.email ||
+      (!loggedIn && (!formData.name || !formData.email)) ||
       !formData.location ||
       !formData.tour ||
       !formData.comment ||
@@ -90,7 +108,7 @@ const ReviewFormModal = ({ onReviewSubmitted }: ReviewFormModalProps) => {
 
       if (data.success) {
         toast.success("Review submitted successfully! It will be displayed after approval.");
-        setFormData({ name: "", email: "", location: "", tour: "", comment: "" });
+        setFormData((prev) => loggedIn ? { ...prev, location: "", tour: "", comment: "" } : { name: "", email: "", location: "", tour: "", comment: "" });
         setRating(0);
         setOpen(false);
         
@@ -125,32 +143,39 @@ const ReviewFormModal = ({ onReviewSubmitted }: ReviewFormModalProps) => {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name Field */}
-          <div className="space-y-2">
-            <Label htmlFor="name">Full Name *</Label>
-            <Input
-              id="name"
-              name="name"
-              placeholder="Your name"
-              value={formData.name}
-              onChange={handleInputChange}
-              disabled={loading}
-            />
-          </div>
+          {/* Name / Email (prefilled when logged in) */}
+          {loggedIn ? (
+            <div className="space-y-1">
+              <p className="text-sm text-muted-foreground">Reviewing as <strong>{formData.name}</strong> • {formData.email}</p>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name *</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  placeholder="Your name"
+                  value={formData.name}
+                  onChange={handleInputChange}
+                  disabled={loading}
+                />
+              </div>
 
-          {/* Email Field */}
-          <div className="space-y-2">
-            <Label htmlFor="email">Email Address *</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              placeholder="your.email@example.com"
-              value={formData.email}
-              onChange={handleInputChange}
-              disabled={loading}
-            />
-          </div>
+              <div className="space-y-2">
+                <Label htmlFor="email">Email Address *</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  placeholder="your.email@example.com"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  disabled={loading}
+                />
+              </div>
+            </>
+          )}
 
           {/* Location Field */}
           <div className="space-y-2">

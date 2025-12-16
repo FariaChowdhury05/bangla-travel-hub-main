@@ -11,6 +11,8 @@ import { Loader, MapPin, Calendar, Users, DollarSign } from 'lucide-react';
 interface Booking {
   id: number;
   user_id: number;
+  user_name?: string | null;
+  user_email?: string | null;
   hotel_id: number | null;
   package_id: number | null;
   booking_name: string;
@@ -22,6 +24,9 @@ interface Booking {
   nights: number | null;
   guest_count: number;
   created_at: string;
+  guide_id?: number | null;
+  guide_name?: string | null;
+  guide_rate_per_day?: number | null;
 }
 
 const Bookings = () => {
@@ -119,6 +124,9 @@ const Bookings = () => {
                     <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
                       <div className="flex-1">
                         <h3 className="text-2xl font-semibold text-foreground mb-4">{booking.booking_name}</h3>
+                        {booking.user_name && (
+                          <p className="text-sm text-muted-foreground mb-2">Booked by: <strong>{booking.user_name}</strong> {booking.user_email && <span className="ml-2">• {booking.user_email}</span>}</p>
+                        )}
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                           {booking.check_in && booking.check_out && (
@@ -132,7 +140,13 @@ const Bookings = () => {
                             <span>{booking.guest_count} guest{booking.guest_count > 1 ? 's' : ''}{booking.nights && ` • ${booking.nights} night${booking.nights > 1 ? 's' : ''}`}</span>
                           </div>
                         </div>
-
+                        
+                        {booking.guide_name && (
+                          <div className="mt-3">
+                            <p className="text-sm font-medium">Guide</p>
+                            <p className="text-sm text-muted-foreground">{booking.guide_name}{booking.guide_rate_per_day ? ` • ৳${Number(booking.guide_rate_per_day).toFixed(2)}/day` : ''}</p>
+                          </div>
+                        )}
                         <div className="flex items-center gap-2">
                           <DollarSign className="h-5 w-5 text-primary" />
                           <span className="text-2xl font-bold text-primary">৳{booking.total_amount.toFixed(2)}</span>
@@ -155,7 +169,7 @@ const Bookings = () => {
                                 Cancel
                               </Button>
                             )}
-                            <Button variant="outline" size="sm" onClick={() => window.location.href = `/bookings/${booking.id}`}>
+                            <Button variant="outline" size="sm" onClick={() => navigate(`/bookings/${booking.id}`)}>
                               View Details
                             </Button>
                           </div>

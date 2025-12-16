@@ -96,6 +96,94 @@ if ($method === 'GET') {
         echo json_encode(['success' => false, 'error' => $stmt->error]);
     }
     exit();
+} elseif ($method === 'PATCH') {
+    // Admin only
+    if (!isAdmin()) {
+        http_response_code(403);
+        echo json_encode(['success' => false, 'error' => 'Only admins can update hotels']);
+        exit();
+    }
+
+    $input = json_decode(file_get_contents('php://input'), true) ?? [];
+    if (!isset($input['id'])) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'Hotel ID required']);
+        exit();
+    }
+    $id = intval($input['id']);
+
+    // Allowed fields to update
+    $fields = [];
+    $params = [];
+    if (isset($input['destination_id'])) {
+        $fields[] = 'destination_id = ?';
+        $params[] = intval($input['destination_id']);
+    }
+    if (isset($input['name'])) {
+        $fields[] = 'name = ?';
+        $params[] = $conn->real_escape_string(trim($input['name']));
+    }
+    if (isset($input['description'])) {
+        $fields[] = 'description = ?';
+        $params[] = $conn->real_escape_string(trim($input['description']));
+    }
+    if (isset($input['image_url'])) {
+        $fields[] = 'image_url = ?';
+        $params[] = $conn->real_escape_string(trim($input['image_url']));
+    }
+    if (isset($input['rating'])) {
+        $fields[] = 'rating = ?';
+        $params[] = floatval($input['rating']);
+    }
+    if (isset($input['address'])) {
+        $fields[] = 'address = ?';
+        $params[] = $conn->real_escape_string(trim($input['address']));
+    }
+    if (isset($input['phone'])) {
+        $fields[] = 'phone = ?';
+        $params[] = $conn->real_escape_string(trim($input['phone']));
+    }
+
+    if (empty($fields)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'error' => 'No fields to update']);
+        exit();
+    }
+
+    $sql = 'UPDATE hotels SET ' . implode(', ', $fields) . ' WHERE id = ?';
+    $stmt = $conn->prepare($sql);
+
+    // build types string and bind params
+    $types = '';
+    foreach ($params as $p) {
+        if (is_int($p))
+            $types .= 'i';
+        elseif (is_float($p))
+            $types .= 'd';
+        else
+            $types .= 's';
+    }
+    $types .= 'i'; // id
+    $params[] = $id;
+
+    // bind dynamically
+    $bind_names = [];
+    $bind_names[] = $types;
+    for ($i = 0; $i < count($params); $i++) {
+        $bind_name = 'param' . $i;
+        $$bind_name = $params[$i];
+        $bind_names[] = &$$bind_name;
+    }
+    call_user_func_array([$stmt, 'bind_param'], $bind_names);
+
+    if ($stmt->execute()) {
+        echo json_encode(['success' => true, 'message' => 'Hotel updated']);
+    } else {
+        http_response_code(500);
+        echo json_encode(['success' => false, 'error' => $stmt->error]);
+    }
+    exit();
+
 } elseif ($method === 'DELETE') {
     // Admin only
     if (!isAdmin()) {
