@@ -1,7 +1,7 @@
 // API Configuration
 // Make sure your project folder is in C:\xampp\htdocs\bangla-travel-hub-main
 // Or update the path below to match your XAMPP folder structure
-export const API_BASE_URL = 'http://localhost/bangla-travel-hub-main/api';
+export const API_BASE_URL = 'https://bangla-travel-hub-main.vercel.app/api';
 
 export const API_ENDPOINTS = {
   REVIEWS_GET: `${API_BASE_URL}/reviews.php`,
